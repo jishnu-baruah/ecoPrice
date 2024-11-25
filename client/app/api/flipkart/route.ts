@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const API_KEY = '63393904c8msh94da022de596ffbp183dc3jsnb122794135ff'; // Replace with your actual API key
+const API_KEY = process.env.RAPID_API_KEY; // Replace with your actual API key
 const FLIPKART_API_HOST = 'real-time-flipkart-api.p.rapidapi.com';
 
 export async function GET(request: Request) {

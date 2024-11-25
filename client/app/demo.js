@@ -12,11 +12,12 @@ const EcoPriceDemo = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const API_KEY = '9e3696d022msh4acea172e57f19fp12e40ejsnaff28cd461e8';
+  const API_KEY = process.env.RAPID_API_KEY; 
+
   const fetchAmazonProducts = async (query) => {
     try {
       const searchResponse = await fetch(
-        `https://real-time-amazon-data.p.rapidapi.com/search?query=${encodeURIComponent(query)}&country=US`,
+        `https://real-time-amazon-data.p.rapidapi.com/search?query=${encodeURIComponent(query)}&country=IN`,
         {
           headers: {
             'x-rapidapi-host': 'real-time-amazon-data.p.rapidapi.com',
@@ -35,7 +36,7 @@ const EcoPriceDemo = () => {
         products.slice(0, 3).map(async (product) => {
           try {
             const detailsResponse = await fetch(
-              `https://real-time-amazon-data.p.rapidapi.com/product-details?asin=${product.asin}&country=US`,
+              `https://real-time-amazon-data.p.rapidapi.com/product-details?asin=${product.asin}&country=IN`,
               {
                 headers: {
                   'x-rapidapi-host': 'real-time-amazon-data.p.rapidapi.com',
@@ -57,6 +58,31 @@ const EcoPriceDemo = () => {
       return detailedProducts;
     } catch (error) {
       console.error('Amazon API Error:', error);
+      return [];
+    }
+  };
+
+  const fetchFlipkartProducts = async (query) => {
+    try {
+      const response = await fetch(`/api/flipkart?query=${encodeURIComponent(query)}&page=1&sort_by=popularity`);
+  
+      if (!response.ok) throw new Error('Flipkart search failed');
+  
+      const data = await response.json();
+      return (data.products || []).slice(0, 3).map(product => ({
+        pid: product.pid || Math.random().toString(),
+        title: product.title || 'Unnamed Product',
+        imageUrl: product.images?.[0] || '/api/placeholder/400/320',
+        price: product.price,
+        mrp: product.mrp,
+        rating: product.rating?.average || 'No rating',
+        ratingCount: product.rating?.count || 0,
+        url: product.url,
+        brand: product.brand,
+        highlights: product.highlights || []
+      }));
+    } catch (error) {
+      console.error('Flipkart API Error:', error);
       return [];
     }
   };
@@ -94,11 +120,11 @@ const EcoPriceDemo = () => {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-2xl font-bold text-blue-600">
-              {product.product_price || 'Price unavailable'}
+           {product.product_price || 'Price unavailable'}
             </span>
             {product.product_original_price && (
               <span className="text-sm text-gray-500 line-through">
-                {product.product_original_price}
+               {product.product_original_price}
               </span>
             )}
           </div>
@@ -138,40 +164,8 @@ const EcoPriceDemo = () => {
     </Card>
   );
 
-  const fetchFlipkartProducts = async (query) => {
-    try {
-      const response = await fetch(`/api/flipkart/search?query=${encodeURIComponent(query)}&page=1&sort_by=popularity`);
-  
-      if (!response.ok) throw new Error('Flipkart search failed');
-  
-      const data = await response.json();
-      console.log('Backend Flipkart Data:', data); // For debugging
-  
-      // Assuming the data contains a 'products' field with an array of products
-      const products = data.products || [];
-  
-      return products.slice(0, 3).map(product => ({
-        productId: product.id || product.pid || Math.random().toString(),
-        title: product.title || 'Unnamed Product',
-        imageUrl: product.imageUrl || '/default-placeholder.png',
-        price: product.price || 'Unavailable',
-        mrp: product.mrp || null,
-        rating: product.rating || 'No rating',
-        ratingCount: product.ratingCount || 0,
-        url: product.url || '#',
-        offers: product.offers || [],
-        highlights: product.highlights || [],
-        brand: product.brand || 'Unknown Brand',
-      }));
-    } catch (error) {
-      console.error('Flipkart Route Error:', error);
-      return [];
-    }
-  };
-  
-
   const renderFlipkartProduct = (product) => (
-    <Card key={product.productId} className="overflow-hidden">
+    <Card key={product.pid} className="overflow-hidden">
       <div className="h-48 overflow-hidden relative">
         <img
           src={product.imageUrl}
@@ -181,13 +175,6 @@ const EcoPriceDemo = () => {
             e.target.src = '/api/placeholder/400/320';
           }}
         />
-        {product.offers?.length > 0 && (
-          <div className="absolute top-2 right-2">
-            <span className="bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-              <Tag size={12} /> {product.offers.length} Offers
-            </span>
-          </div>
-        )}
       </div>
       <CardContent className="p-4">
         <h3 className="font-medium text-sm mb-2 line-clamp-2">
@@ -196,15 +183,11 @@ const EcoPriceDemo = () => {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-2xl font-bold text-blue-600">
-              ₹{typeof product.price === 'number' ? 
-                product.price.toLocaleString() : 
-                product.price?.replace(/[^\d.]/g, '').toLocaleString() || 'Price unavailable'}
+              ₹{product.price?.toLocaleString() || 'Price unavailable'}
             </span>
             {product.mrp && product.mrp !== product.price && (
               <span className="text-sm text-gray-500 line-through">
-                ₹{typeof product.mrp === 'number' ? 
-                  product.mrp.toLocaleString() : 
-                  product.mrp?.replace(/[^\d.]/g, '').toLocaleString()}
+                ₹{product.mrp.toLocaleString()}
               </span>
             )}
           </div>
@@ -214,7 +197,7 @@ const EcoPriceDemo = () => {
               <Star className="text-yellow-400 fill-yellow-400" size={16} />
               <span className="text-sm">
                 {product.rating}
-                {product.ratingCount && (
+                {product.ratingCount > 0 && (
                   <span className="text-gray-500">
                     {' '}({product.ratingCount.toLocaleString()} ratings)
                   </span>
@@ -278,8 +261,6 @@ const EcoPriceDemo = () => {
       setLoading(false);
     }
   };
-
-  // Rest of the component remains the same
 
   return (
     <div className="max-w-6xl mx-auto p-4">

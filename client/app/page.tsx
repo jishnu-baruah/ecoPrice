@@ -12,7 +12,7 @@ export default function Home() {
         <p className="text-xl text-muted-foreground mb-8">
           Compare prices and environmental impact in one place
         </p>
-        <FlipkartSearch/>
+        <EcoPriceDemo/>
       </section>
     </div>
   );
